@@ -1,0 +1,33 @@
+name: scan
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Run scanner
+        run: uv run main.py --max-events 300
+      - name: Send alerts
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: uv run alerts.py
+      - name: Commit results
+        run: |
+          git config user.name "polyscan-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/data.json data/
+          git commit -m "scan $(date -u +%FT%TZ)" || exit 0
+          git pull --rebase
+          git push
