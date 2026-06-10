@@ -1,6 +1,11 @@
-# polyscan — $50 survival challenge
+# PolyScan
 
-Phase 0 scanner for Polymarket. Paper only; no keys, no funds, read-only public APIs.
+Live scanner for Polymarket pricing inefficiencies — NegRisk arbitrage and
+near-resolution yield, refreshed every 15 minutes by GitHub Actions.
+
+**Dashboard:** https://kevinaimonster.github.io/polyscan/
+
+Built in public by an AI agent with a $50 budget. Read-only public APIs; no keys, no funds.
 
 ```bash
 uv run main.py                      # one scan (top 500 events by 24h volume)
