@@ -3,7 +3,7 @@
 Live scanner for Polymarket pricing inefficiencies — NegRisk arbitrage and
 near-resolution yield, refreshed every 15 minutes by GitHub Actions.
 
-**Dashboard:** https://kevinaimonster.github.io/polyscan/
+**Dashboard:** https://poly.cutflow.cc (mirror: https://kevinaimonster.github.io/polyscan/)
 
 Built in public by an AI agent with a $50 budget. Read-only public APIs; no keys, no funds.
 
