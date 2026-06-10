@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PolyScan — live Polymarket inefficiency scanner</title>
 <meta name="description" content="Free scanner that surfaces NegRisk arbitrage and near-resolution opportunities on Polymarket, refreshed every 15 minutes.">
+<link rel="canonical" href="https://poly.cutflow.cc/">
+<meta property="og:title" content="PolyScan — live Polymarket inefficiency scanner">
+<meta property="og:description" content="NegRisk arbitrage & near-resolution yield on Polymarket, auto-refreshed every 15 minutes. See how much free money actually exists.">
+<meta property="og:url" content="https://poly.cutflow.cc/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <style>
   :root {
     --bg: #0b0e14; --panel: #131722; --border: #232a3b;
@@ -46,6 +52,11 @@
   footer { color: var(--dim); font-size: 12px; border-top: 1px solid var(--border);
            padding-top: 18px; line-height: 1.7; }
   a { color: var(--accent); }
+  .waitlist { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+  .waitlist input { background: var(--panel); border: 1px solid var(--border); color: var(--text);
+                    padding: 9px 12px; border-radius: 8px; font-size: 14px; min-width: 220px; }
+  .waitlist button { cursor: pointer; }
+  #wlmsg { font-size: 13px; color: var(--green); }
 </style>
 </head>
 <body>
@@ -56,8 +67,13 @@
     <p class="fresh" id="fresh">loading…</p>
     <div class="cta">
       <a class="btn primary" id="tg" href="#" style="display:none">⚡ Real-time alerts on Telegram (free beta)</a>
-      <a class="btn ghost" href="https://github.com/kevinaimonster/polyscan">Source on GitHub</a>
     </div>
+    <form id="wl" class="waitlist">
+      <input type="email" id="em" placeholder="you@email.com" required>
+      <button class="btn primary" type="submit">Get real-time alerts →</button>
+      <span id="wlmsg"></span>
+    </form>
+    <p class="note" style="margin-top:6px">Arbitrage windows close in minutes. The dashboard refreshes every 15 — alerts subscribers hear about edges first. Free during beta.</p>
   </header>
 
   <section>
@@ -77,8 +93,7 @@
 
   <footer>
     Data from Polymarket public APIs (Gamma + CLOB), top 300 events by 24h volume, top-of-book sizing.<br>
-    Nothing here is financial advice. Markets move faster than a 15-minute cron — treat this as a research feed, not an execution signal.<br>
-    Built in public with an AI agent and a $50 budget. <a href="https://github.com/kevinaimonster/polyscan">Star the repo</a> if this is useful.
+    Nothing here is financial advice. Markets move faster than a 15-minute cron — treat this as a research feed, not an execution signal.
   </footer>
 </div>
 
@@ -121,6 +136,15 @@ fetch("data.json", {cache: "no-store"}).then(r => r.json()).then(d => {
 
   if (window.TG_LINK) { $("tg").href = window.TG_LINK; $("tg").style.display = ""; }
 }).catch(() => { $("fresh").textContent = "data.json not found — first scan pending"; });
+
+$("wl").addEventListener("submit", async e => {
+  e.preventDefault();
+  const r = await fetch("/api/subscribe", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({email: $("em").value}),
+  }).then(r => r.json()).catch(() => ({ok: false}));
+  $("wlmsg").textContent = r.ok ? "✓ You're in — alerts land here when beta opens." : "Hmm, that didn't work — check the email?";
+});
 </script>
 </body>
 </html>
