@@ -4,6 +4,9 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
+# Free-tier cron fires erratically (hours apart), so each run loops for ~5.5h
+# doing a scan every 15 min. Runs chain via the concurrency queue: while one
+# is active the next cron firing waits, giving continuous coverage.
 concurrency:
   group: scan
   cancel-in-progress: false
@@ -11,29 +14,35 @@ concurrency:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     permissions:
       contents: write
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - name: Run scanner
-        run: uv run main.py --max-events 300
-      - name: Send alerts
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: uv run alerts.py
-      - name: Deploy to Cloudflare Pages
-        if: ${{ env.CLOUDFLARE_API_TOKEN != '' }}
-        run: npx --yes wrangler pages deploy docs --project-name polyscan --branch main --commit-dirty=true
-      - name: Commit results
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Scan loop
         run: |
           git config user.name "polyscan-bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs/data.json data/
-          git commit -m "scan $(date -u +%FT%TZ)" || exit 0
-          git pull --rebase
-          git push
+          deploy() {
+            npx --yes wrangler pages deploy docs --project-name polyscan \
+              --branch main --commit-dirty=true
+          }
+          for i in $(seq 1 22); do
+            echo "=== cycle $i/22 $(date -u +%FT%TZ) ==="
+            uv run main.py --max-events 300 || true
+            uv run alerts.py || true
+            if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+              deploy || { sleep 30; deploy; } || true
+            fi
+            git add docs/data.json data/
+            git commit -m "scan $(date -u +%FT%TZ)" || true
+            git pull --rebase || true
+            git push || true
+            [ "$i" = "22" ] || sleep 900
+          done
